@@ -60,6 +60,9 @@
                 <underline>false</underline>
                </font>
               </property>
+              <property name="focusPolicy">
+               <enum>Qt::StrongFocus</enum>
+              </property>
               <property name="toolTip">
                <string/>
               </property>
@@ -86,13 +89,16 @@
           </font>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::TabFocus</enum>
+          <enum>Qt::StrongFocus</enum>
          </property>
          <property name="toolTip">
           <string>Generate N passwords</string>
          </property>
          <property name="text">
           <string>Generate</string>
+         </property>
+         <property name="default">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -104,7 +110,7 @@
           </font>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::TabFocus</enum>
+          <enum>Qt::StrongFocus</enum>
          </property>
          <property name="suffix">
           <string> passwords</string>
@@ -131,7 +137,7 @@
           </font>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::TabFocus</enum>
+          <enum>Qt::StrongFocus</enum>
          </property>
          <property name="toolTip">
           <string>Password length: 5q symbols</string>
@@ -206,7 +212,7 @@ color: rgb(255, 255, 255);</string>
           </font>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::TabFocus</enum>
+          <enum>Qt::ClickFocus</enum>
          </property>
          <property name="toolTip">
           <string>Clear history</string>

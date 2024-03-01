@@ -194,6 +194,7 @@ void Widget::values_have_been_generated()
     ui->textBrowser->append("");
     ui->btn_generate->setText(main::btn_txt_gen);
     ui->btn_generate->setEnabled(true);
+    ui->btn_generate->setFocus();
 }
 
 void Widget::on_spbx_pass_len_valueChanged(int arg1)
