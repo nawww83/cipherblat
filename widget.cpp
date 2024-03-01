@@ -7,6 +7,23 @@
 #include "key.h"
 #include "lfsr_hash/lfsr_hash.h"
 
+/*
+Master phrase:
+ABCD.
+
+First passwords:
+ ***** IDX: 0 *****
+OW/BsEiva2'27#47{T47
+;*>NcB&H{WUE+{:G}|cm
+@@sL/'4n?1!vr*G?L'*k
+>+igA(>J,\$B}(PARKS5
+&##A.G!@Ul9QR<<G6MNg
+'*a0U%j2CG?FP0q/=={A
+(bG4,Q.T>]HRdW)R}@hv
+<-1v901x/}5GiUmMvgeP
+*/
+
+
 namespace main {
     QString btn_txt_gen;
     lfsr_rng::gens cipher;
