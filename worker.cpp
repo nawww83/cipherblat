@@ -25,32 +25,3 @@ QFuture<QVector<lfsr8::u64> > worker::gen_n(lfsr_rng::gens& g, int n)
     };
     return QtConcurrent::run(f, n);
 }
-
-QFuture<lfsr8::u64 > worker::check_period(lfsr_rng::gens& g, lfsr8::u64 &ref)
-{
-    auto f = [&g, &ref, this]() {
-        mStopPeriodChecking.storeRelaxed(0);
-        QPair<lfsr8::u64, lfsr8::u64> p;
-        lfsr8::u64 T = 1;
-        lfsr8::u64 ref0 = ref;
-        const lfsr8::u64 mask = (1ull << 32) - 1;
-        int c = 0;
-        while (true) {
-            c++;
-            ref = g.next_u64();
-            if ((ref0 & mask) != (ref & mask)) {
-                T++;
-                if ((c & 65535) != 0) {
-                    continue;
-                }
-                if (mStopPeriodChecking.loadRelaxed()) {
-                    break;
-                }
-                continue;
-            }
-            break;
-        }
-        return T;
-    };
-    return QtConcurrent::run(f);
-}
