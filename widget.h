@@ -5,7 +5,6 @@
 #include <QTextEdit>
 #include <QFutureWatcher>
 
-#include "key.h"
 #include "stream_cipher.h"
 
 
@@ -49,9 +48,8 @@ signals:
 
 private:
     Ui::Widget *ui;
-    key::Key key;
-    QFutureWatcher<lfsr_rng::gens> watcher;
-    QFutureWatcher<QVector<lfsr8::u64>> watcher_v;
+    QFutureWatcher<lfsr_rng::gens> watcher_seed;
+    QFutureWatcher<QVector<lfsr8::u64>> watcher_generate;
     void update_txt_browser(lfsr8::u16 x);
     void update_txt_browser(lfsr8::u32 x);
     void update_txt_browser(lfsr8::u64 x);
@@ -68,14 +66,14 @@ public:
     }
 
 signals:
-    void closing(); // define new signal
+    void sig_closing();
 
 protected:
     bool mIsClosing = false;
-    virtual void closeEvent(QCloseEvent *event) override
+    virtual void closeEvent(QCloseEvent *event) override final
     {
         mIsClosing = true;
-        emit closing(); // send signal before closing.
+        emit sig_closing();
         QTextEdit::closeEvent(event);
         mIsClosing = false;
     }

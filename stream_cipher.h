@@ -4,13 +4,12 @@
 Random numbers generator with ~155 bit period.
 */
 
-#include "../lfsr_hash/lfsr.h"
+#include "lfsr_hash/lfsr.h"
 
 #include <utility>
 #include <cmath>
 #include <numeric>
 #include <array>
-
 
 namespace lfsr_rng {
 
@@ -19,23 +18,28 @@ using u32 = lfsr8::u32;
 using u64 = lfsr8::u64;
 using u128 = std::pair<lfsr8::u64, lfsr8::u64>;
 
-static constexpr u16 p1 = 19;
-static constexpr u16 p2 = 17;
-static constexpr u16 p3 = 17;
-static constexpr u16 p4 = 13;
+static constexpr std::array<int, 4> p {19, 17, 17, 13};
 static constexpr int m = 8;
 
-using LFSR_pair_1 = lfsr8::LFSR_paired_2x4<p1>;
-using LFSR_pair_2 = lfsr8::LFSR_paired_2x4<p2>;
-using LFSR_pair_3 = lfsr8::LFSR_paired_2x4<p3>;
-using LFSR_pair_4 = lfsr8::LFSR_paired_2x4<p4>;
+using LFSR_pair_1 = lfsr8::LFSR_paired_2x4<p[0]>;
+using LFSR_pair_2 = lfsr8::LFSR_paired_2x4<p[1]>;
+using LFSR_pair_3 = lfsr8::LFSR_paired_2x4<p[2]>;
+using LFSR_pair_4 = lfsr8::LFSR_paired_2x4<p[3]>;
 using STATE = lfsr8::u16x8;
 
 static constexpr STATE K1 = {9, 5, 2, 0, 4, 2, 2, 6};    // p=19
 static constexpr STATE K2 = {3, 4, 2, 1, 6, 1, 2, 1};    // p=17
 static constexpr STATE K3 = {3, 2, 3, 4, 6, 2, 0, 7};    // p=17
 static constexpr STATE K4 = {2, 3, 1, 1, 2, 0, 1, 7};    // p=13
-static constexpr std::array<u16, 4> primes {7, 11, 11, 11}; // Sawtooth periods: such that T = p^4 - 1 is not divisible by the primes
+static constexpr std::array<int, 4> primes {7, 11, 11, 11}; // Sawtooth periods: such that T = p^4 - 1 is not divisible by the primes
+
+//
+static constexpr std::array<int, 8> primes_duplicates {7, 7, 11, 11, 11, 11, 11, 11};
+
+static_assert((primes[0] == primes_duplicates[0]) && (primes[0] == primes_duplicates[1]));
+static_assert((primes[1] == primes_duplicates[2]) && (primes[1] == primes_duplicates[3]));
+static_assert((primes[2] == primes_duplicates[4]) && (primes[2] == primes_duplicates[5]));
+static_assert((primes[3] == primes_duplicates[6]) && (primes[3] == primes_duplicates[7]));
 
 inline STATE operator^(const STATE& x, const STATE& y) {
     STATE st;
@@ -59,161 +63,140 @@ inline void operator%=(STATE& x, u32 p) {
     }
 }
 
+template <size_t N>
+inline void sawtooth(std::array<u16, N>& v, const std::array<int, N>& p) {
+    size_t i = 0;
+    for (auto& el : v) {
+        el++;
+        el %= p[i];
+        i++;
+    }
+}
+
+template <size_t N>
+inline void increment(std::array<u32, N>& v) {
+    for (auto& el : v) {
+        el++;
+    }
+}
 
 struct gens {
+    using lfsr_ptr = lfsr8::LFSR_paired_2x4<p[0]>*;
     LFSR_pair_1 gp1;
     LFSR_pair_2 gp2;
     LFSR_pair_3 gp3;
     LFSR_pair_4 gp4;
-    std::array<u32, 16> T;
-    u16 ii11;  // Sawtooth initial states
-    u16 ii12;  //
-    u16 ii21;  //
-    u16 ii22;  //
-    u16 ii31;  //
-    u16 ii32;  //
-    u16 ii41;  //
-    u16 ii42;  //
-    u16 ii01;  // initial states
-    u16 ii02;  //
-    u16 ii03;  //
-    u16 ii04;  //
+    std::array<u32, 8> Tc{};
+    std::array<u32, 8> Tref{};
+    std::array<u16, 8> ii_saw{};  // Sawtooth states
+    std::array<u16, 8> ii0_saw{};  // Stored initial states
     int is_finded;
 public:
-    constexpr gens(): gp1(K1), gp2(K2),  gp3(K3), gp4(K4), T({}),
-        ii11(0), ii12(0), ii21(0), ii22(0), ii31(0), ii32(0), ii41(0), ii42(0),
-        ii01(0), ii02(0), ii03(0), ii04(0),
+    constexpr gens(): gp1(K1), gp2(K2),  gp3(K3), gp4(K4),
         is_finded(0)
     {}
     bool is_succes() const {
         return (is_finded != 0);
     }
+    // dirty hack
+    lfsr_ptr gp(int i) {
+        void* ptrs[4] = {&gp1, &gp2, &gp3, &gp4};
+        return (lfsr_ptr)ptrs[i];
+    }
     void seed(STATE st) {
-        STATE tmp1 = st;
-        STATE tmp2 = st;
-        STATE tmp3 = st;
-        STATE tmp4 = st;
-        for (auto& el : tmp1) {
-            el %= 16;
+        // distribute the state "st" to all LFSRs
+        std::array<u16, 4> h {1, 2, 2, 3}; // a salt
+        for (int i=0; i<4; ++i) {
+            STATE tmp = st;
+            for (auto& el : tmp) {
+                el >>= i*4;
+                el %= 16;
+                h[i] ^= el;
+            }
+            gp(i)->set_state(tmp);
         }
-        for (auto& el : tmp2) {
-            el >>= 4;
-            el %= 16;
-        }
-        for (auto& el : tmp3) {
-            el >>= 8;
-            el %= 16;
-        }
-        for (auto& el : tmp4) {
-            el >>= 12;
-            el %= 16;
-        }
-        gp1.set_state(tmp1);
-        gp2.set_state(tmp2);
-        gp3.set_state(tmp3);
-        gp4.set_state(tmp4);
-        u16 h1 = 1;
-        for (const auto& el : tmp1) {
-            h1 ^= el;
-        }
-        u16 h2 = 2;
-        for (const auto& el : tmp2) {
-            h2 ^= el;
-        }
-        u16 h3 = 2;
-        for (const auto& el : tmp3) {
-            h3 ^= el;
-        }
-        u16 h4 = 3;
-        for (const auto& el : tmp4) {
-            h4 ^= el;
-        }
-        u16 i1 = h1;
-        u16 i2 = h2;
-        u16 i3 = h3;
-        u16 i4 = h4;
         int lcm = std::lcm((int)primes[0], (int)primes[1]);
         lcm = std::lcm(lcm, (int)primes[2]);
         lcm = std::lcm(lcm, (int)primes[3]);
-        for (int i=0; i<lcm; ++i) { // saturate LFSRs
-            gp1.next(i1);
-            gp2.next(i2);
-            gp3.next(i3);
-            gp4.next(i4);
-            i1++; i2++; i3++; i4++;
-            i1 %= primes[0];
-            i2 %= primes[1];
-            i3 %= primes[2];
-            i4 %= primes[3];
+        for (int i=0; i<lcm; ++i) { // saturate LFSRs enough
+            gp1.next(h[0]);
+            gp2.next(h[1]);
+            gp3.next(h[2]);
+            gp4.next(h[3]);
+            sawtooth<4>(h, primes);
         }
         const auto ref1 = gp1.get_state();
         const auto ref2 = gp2.get_state();
         const auto ref3 = gp3.get_state();
         const auto ref4 = gp4.get_state();
         auto test251 = [ref1, ref2, ref3, ref4, this](u16 i01, u16 i02, u16 i03, u16 i04) -> int {
-            T = {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0};
-            const u32 T01 = std::pow((long)p1, 4) - 1;
-            const u32 T02 = std::pow((long)p2, 4) - 1;
-            const u32 T03 = std::pow((long)p3, 4) - 1;
-            const u32 T04 = std::pow((long)p4, 4) - 1;
+            Tc = {1, 1, 1, 1, 1, 1, 1, 1};   // counters
+            Tref = {0, 0, 0, 0, 0, 0, 0, 0}; // reference periods
+            const std::array<u32, 4> Tmax {(u32)std::pow((long)p[0], 4) - 1,
+                                          (u32)std::pow((long)p[1], 4) - 1,
+                                          (u32)std::pow((long)p[2], 4) - 1,
+                                              (u32)std::pow((long)p[3], 4) - 1}; // maximal possible periods
             gp1.set_state(ref1);
             gp2.set_state(ref2);
             gp3.set_state(ref3);
             gp4.set_state(ref4);
-            u16 i1 = i01;
-            u16 i2 = i02;
-            u16 i3 = i03;
-            u16 i4 = i04;
+            std::array<u16, 4> i {i01, i02, i03, i04};
             while (true) {
-                gp1.next(i1); //  Sawtooth modulation
-                gp2.next(i2); //  to get random periods T[i] such that sum of T[i] is equal to q*T0, where the q - sawtooth period
-                gp3.next(i3);
-                gp4.next(i4);
-                i1++; i2++;   //  The remainder mod(p^4 - 1 , q) is not zero => we achieve all indexes i in [0, q) when LFSR is in the same reference state
-                i3++; i4++;
-                i1 %= primes[0];
-                i2 %= primes[1]; // We visit almost all i ecxept one => we set the restriction T < q*T0 below
-                i3 %= primes[2];
-                i4 %= primes[3];
-                T[8] = (! gp1.is_state_low(ref1)) ? T[8] : ((T[0] < primes[0]*T01) ? T[0] : T[8]);
-                T[9] = (! gp1.is_state_high(ref1)) ? T[9] : ((T[1] < primes[0]*T01) ? T[1] : T[9]);
-                T[10] = (! gp2.is_state_low(ref2)) ? T[10] : ((T[2] < primes[1]*T02) ? T[2] : T[10]);
-                T[11] = (! gp2.is_state_high(ref2)) ? T[11] : ((T[3] < primes[1]*T02) ? T[3] : T[11]);
-                T[12] = (! gp3.is_state_low(ref3)) ? T[12] : ((T[4] < primes[2]*T03) ? T[4] : T[12]);
-                T[13] = (! gp3.is_state_high(ref3)) ? T[13] : ((T[5] < primes[2]*T03) ? T[5] : T[13]);
-                T[14] = (! gp4.is_state_low(ref4)) ? T[14] : ((T[6] < primes[3]*T04) ? T[6] : T[14]);
-                T[15] = (! gp4.is_state_high(ref4)) ? T[15] : ((T[7] < primes[3]*T04) ? T[7] : T[15]);
-                T[0]++; T[1]++;
-                T[2]++; T[3]++;
-                T[4]++; T[5]++;
-                T[6]++; T[7]++;
+                gp1.next(i[0]); //  Sawtooth modulation
+                gp2.next(i[1]); //  to get random periods T[i] such that sum of T[i] is equal to q*T0, where the q - sawtooth period
+                gp3.next(i[2]);
+                gp4.next(i[3]);
+                //  The remainder mod(p^4 - 1 , q) is not zero => we achieve all indexes i in [0, q) when LFSR is in the same reference state
+                sawtooth(i, primes); // We will visit almost all i ecxept one => we set the restriction T < q*T0 below
+                Tref[0] = (! gp1.is_state_low(ref1)) ? Tref[0] : ((Tc[0] < primes_duplicates[0]*Tmax[0]) ? Tc[0] : Tref[0]);
+                Tref[1] = (! gp1.is_state_high(ref1)) ? Tref[1] : ((Tc[1] < primes_duplicates[1]*Tmax[0]) ? Tc[1] : Tref[1]);
+                Tref[2] = (! gp2.is_state_low(ref2)) ? Tref[2] : ((Tc[2] < primes_duplicates[2]*Tmax[1]) ? Tc[2] : Tref[2]);
+                Tref[3] = (! gp2.is_state_high(ref2)) ? Tref[3] : ((Tc[3] < primes_duplicates[3]*Tmax[1]) ? Tc[3] : Tref[3]);
+                Tref[4] = (! gp3.is_state_low(ref3)) ? Tref[4] : ((Tc[4] < primes_duplicates[4]*Tmax[2]) ? Tc[4] : Tref[4]);
+                Tref[5] = (! gp3.is_state_high(ref3)) ? Tref[5] : ((Tc[5] < primes_duplicates[5]*Tmax[2]) ? Tc[5] : Tref[5]);
+                Tref[6] = (! gp4.is_state_low(ref4)) ? Tref[6] : ((Tc[6] < primes_duplicates[6]*Tmax[3]) ? Tc[6] : Tref[6]);
+                Tref[7] = (! gp4.is_state_high(ref4)) ? Tref[7] : ((Tc[7] < primes_duplicates[7]*Tmax[3]) ? Tc[7] : Tref[7]);
+                increment(Tc);
                 // All counters are out of the range
-                if ((T[0] >= primes[0]*T01) && (T[1] >= primes[0]*T01) && (T[2] >= primes[1]*T02) && (T[3] >= primes[1]*T02) &&
-                    (T[4] >= primes[2]*T03) && (T[5] >= primes[2]*T03) && (T[6] >= primes[3]*T04) && (T[7] >= primes[3]*T04)) {
+                if ((Tc[0] >= primes_duplicates[0]*Tmax[0]) &&
+                    (Tc[1] >= primes_duplicates[1]*Tmax[0]) &&
+                    (Tc[2] >= primes_duplicates[2]*Tmax[1]) &&
+                    (Tc[3] >= primes_duplicates[3]*Tmax[1]) &&
+                    (Tc[4] >= primes_duplicates[4]*Tmax[2]) &&
+                    (Tc[5] >= primes_duplicates[5]*Tmax[2]) &&
+                    (Tc[6] >= primes_duplicates[6]*Tmax[3]) &&
+                    (Tc[7] >= primes_duplicates[7]*Tmax[3])) {
                     break;
                 }
             }
-            auto gcd1 = std::gcd(std::gcd(T[8], T[9]), std::gcd(T[10], T[11]));
-            auto gcd2 = std::gcd(std::gcd(T[12], T[13]), std::gcd(T[14], T[15]));
+            auto gcd1 = std::gcd(std::gcd(Tref[0], Tref[1]), std::gcd(Tref[2], Tref[3]));
+            auto gcd2 = std::gcd(std::gcd(Tref[4], Tref[5]), std::gcd(Tref[6], Tref[7]));
             auto gcd = std::gcd(gcd1, gcd2);
-            return ((gcd < 2) && (T[8] > T01) && (T[9] > T01) && (T[10] > T02) && (T[11] > T02) &&
-                    (T[12] > T03) && (T[13] > T03) && (T[14] > T04) && (T[15] > T04)) ? 1 : 0;
+            return ((gcd < 2) &&
+                    (Tref[0] > Tmax[0]) &&
+                    (Tref[1] > Tmax[0]) &&
+                    (Tref[2] > Tmax[1]) &&
+                    (Tref[3] > Tmax[1]) &&
+                    (Tref[4] > Tmax[2]) &&
+                    (Tref[5] > Tmax[2]) &&
+                    (Tref[6] > Tmax[3]) &&
+                    (Tref[7] > Tmax[3])) ? 1 : 0;
         };
         is_finded = 0;
-        ii01 = 0;
-        ii02 = 0;
-        ii03 = 0;
-        ii04 = 0;
         for (u16 i1=1; i1<primes[0]; ++i1) {
             for (u16 i2=1; i2<primes[1]; ++i2) {
                 for (u16 i3=1; i3<primes[2]; ++i3) {
                     for (u16 i4=1; i4<primes[3]; ++i4) {
                         is_finded = test251(i1, i2, i3, i4);
                         if (is_finded != 0) {
-                            ii01 = i1;
-                            ii02 = i2;
-                            ii03 = i3;
-                            ii04 = i4;
+                            ii0_saw[0] = i1;
+                            ii0_saw[1] = i1;
+                            ii0_saw[2] = i2;
+                            ii0_saw[3] = i2;
+                            ii0_saw[4] = i3;
+                            ii0_saw[5] = i3;
+                            ii0_saw[6] = i4;
+                            ii0_saw[7] = i4;
                             break;
                         }
                     } // i4
@@ -229,22 +212,8 @@ public:
                 break;
             }
         } // i1
-        ii11 = ii01;
-        ii12 = ii01;
-        ii21 = ii02;
-        ii22 = ii02;
-        ii31 = ii03;
-        ii32 = ii03;
-        ii41 = ii04;
-        ii42 = ii04;
-        T[0] = 1; // reset counters
-        T[1] = 1;
-        T[2] = 1;
-        T[3] = 1;
-        T[4] = 1;
-        T[5] = 1;
-        T[6] = 1;
-        T[7] = 1;
+        ii_saw = ii0_saw; // initialize sawtooth
+        Tc = {1, 1, 1, 1, 1, 1, 1, 1}; // reset counters
         gp1.set_state(ref1); // must: restore initial states
         gp2.set_state(ref2);
         gp3.set_state(ref3);
@@ -255,38 +224,17 @@ public:
         STATE mSt;
         //
         for (int i=0; i<4; ++i) {
-            gp1.next(ii11, ii12); // must: the same operator as in the seed()
-            gp2.next(ii21, ii22);
-            gp3.next(ii31, ii32);
-            gp4.next(ii41, ii42);
-            ii11++; ii12++; ii21++; ii22++;
-            ii31++; ii32++; ii41++; ii42++;
-            ii11 %= primes[0];  // Sawtooth
-            ii12 %= primes[0];
-            ii21 %= primes[1];
-            ii22 %= primes[1];
-            ii31 %= primes[2];
-            ii32 %= primes[2];
-            ii41 %= primes[3];
-            ii42 %= primes[3];
-            ii11 = (T[0] != T[8]) ? ii11 : ii01;
-            ii12 = (T[1] != T[9]) ? ii12 : ii01;
-            ii21 = (T[2] != T[10]) ? ii21 : ii02;
-            ii22 = (T[3] != T[11]) ? ii22 : ii02;
-            ii31 = (T[4] != T[12]) ? ii31 : ii03;
-            ii32 = (T[5] != T[13]) ? ii32 : ii03;
-            ii41 = (T[6] != T[14]) ? ii41 : ii04;
-            ii42 = (T[7] != T[15]) ? ii42 : ii04;
-            T[0] = (T[0] != T[8]) ? T[0] : 0; // reset counters
-            T[1] = (T[1] != T[9]) ? T[1] : 0;
-            T[2] = (T[2] != T[10]) ? T[2] : 0;
-            T[3] = (T[3] != T[11]) ? T[3] : 0;
-            T[4] = (T[4] != T[12]) ? T[4] : 0;
-            T[5] = (T[5] != T[13]) ? T[5] : 0;
-            T[6] = (T[6] != T[14]) ? T[6] : 0;
-            T[7] = (T[7] != T[15]) ? T[7] : 0;
-            T[0]++; T[1]++; T[2]++; T[3]++;
-            T[4]++; T[5]++; T[6]++; T[7]++;
+            gp1.next(ii_saw[0], ii_saw[1]); // must: the same operator as in the seed()
+            gp2.next(ii_saw[2], ii_saw[3]);
+            gp3.next(ii_saw[4], ii_saw[5]);
+            gp4.next(ii_saw[6], ii_saw[7]);
+            sawtooth<8>(ii_saw, primes_duplicates);
+            // reset if the period was achieved
+            for (int j=0; j<8; ++j) {
+                ii_saw[j] = (Tc[j] != Tref[j]) ? ii_saw[j] : ii0_saw[j];
+                Tc[j] = (Tc[j] != Tref[j]) ? Tc[j] : 0;
+            }
+            increment(Tc);
             //
             mSt = gp1.get_state() ^ gp2.get_state() ^ gp3.get_state() ^ gp4.get_state();
             mSt %= 16;

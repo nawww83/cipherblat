@@ -85,6 +85,9 @@
            <bold>true</bold>
           </font>
          </property>
+         <property name="focusPolicy">
+          <enum>Qt::TabFocus</enum>
+         </property>
          <property name="toolTip">
           <string>Generate N passwords</string>
          </property>
@@ -101,7 +104,7 @@
           </font>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::StrongFocus</enum>
+          <enum>Qt::TabFocus</enum>
          </property>
          <property name="suffix">
           <string> passwords</string>
@@ -128,7 +131,7 @@
           </font>
          </property>
          <property name="focusPolicy">
-          <enum>Qt::StrongFocus</enum>
+          <enum>Qt::TabFocus</enum>
          </property>
          <property name="toolTip">
           <string>Password length: 5q symbols</string>
@@ -201,6 +204,9 @@ color: rgb(255, 255, 255);</string>
           <font>
            <pointsize>12</pointsize>
           </font>
+         </property>
+         <property name="focusPolicy">
+          <enum>Qt::TabFocus</enum>
          </property>
          <property name="toolTip">
           <string>Clear history</string>
