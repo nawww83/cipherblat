@@ -3,16 +3,15 @@
 #include <cstdint>
 #include <cassert>
 #include <array>
-#include <stdio.h>
 #include <type_traits>
 
 #if defined(__x86_64__) || defined(_M_X64)
-#define USE_SSE
+    #define USE_SSE
 #endif
 
 #ifdef USE_SSE
-#include <immintrin.h>
-#include <smmintrin.h>
+    #include <immintrin.h>
+    #include <smmintrin.h>
 #endif
 
 
@@ -30,64 +29,6 @@ public:
     typedef typename std::conditional<(m <= 4), u32, u16>::type SAMPLE;
     typedef typename std::conditional<(m <= 4), u32x4, u16x8>::type STATE;
 };
-
-
-#ifdef USE_SSE
-struct simd_printer {
-    void p128_hex_u8(__m128i in) {
-        alignas(16) uint8_t v[16];
-        _mm_store_si128((__m128i*)v, in);
-        printf("v16_u8: %x %x %x %x | %x %x %x %x | %x %x %x %x | %x %x %x %x\n",
-               v[15], v[14],  v[13],  v[12],  v[11],  v[10],  v[9],  v[8],
-               v[7], v[6], v[5], v[4], v[3], v[2], v[1], v[0]);
-    }
-
-    void p128_hex_u16(__m128i in) {
-        alignas(16) uint16_t v[8];
-        _mm_store_si128((__m128i*)v, in);
-        printf("v8_u16: %x %x %x %x,  %x %x %x %x\n", v[7], v[6], v[5], v[4], v[3], v[2], v[1], v[0]);
-    }
-
-    void p128_hex_u32(__m128i in) {
-        alignas(16) uint32_t v[4];
-        _mm_store_si128((__m128i*)v, in);
-        printf("v4_u32: %x %x %x %x\n", v[3], v[2], v[1], v[0]);
-    }
-
-    void p128_hex_u64(__m128i in) {
-        alignas(16) unsigned long long v[2];  // uint64_t might give format-string warnings with %llx; it's just long in some ABIs
-        _mm_store_si128((__m128i*)v, in);
-        printf("v2_u64: %llx %llx\n", v[1], v[0]);
-    }
-};
-
-// static simd_printer sp;
-
-// make: [0, 0, 0, x_high, 0, 0, 0, x_low] result register 'res'
-// and   [0, 0, 0, -1, 0, 0, 0, -1] mask register 'mask'
-// static auto propagate(u16 x_low, u16 x_high, __m128i& res, __m128i& mask) {
-//     __m128i a = _mm_set1_epi16(x_low);
-//     a = _mm_xor_si128(a, _mm_slli_si128(a, 8));
-//     __m128i b = _mm_set1_epi16(x_high);
-//     b = _mm_xor_si128(b, _mm_srli_si128(b, 8));
-//     res = _mm_or_si128(a, b);
-//     __m128i q = _mm_slli_si128( _mm_set1_epi32(-1), 8);
-//     mask = _mm_xor_si128(_mm_slli_si128( _mm_set1_epi32(-1), 10), q);
-//     mask = _mm_xor_si128(mask, _mm_srli_si128(mask, 8));
-//     res = _mm_and_si128(res, mask);
-// }
-
-#endif
-
-
-template <int m, typename T = typename MType<m>::STATE>
-static auto is_zero(T st) {
-    bool zf = true;
-    for (int i=0; i<m; ++i) {
-        zf &= (st[i] == 0);
-    }
-    return zf;
-}
 
 template <int p, int m>
 class LFSR {
