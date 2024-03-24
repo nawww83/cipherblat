@@ -6,4 +6,4 @@ You can set a unique master phrase in any language in UTF-8 encoding to generate
 
 The algorithm is based on LFSR hash and Random Number Generator, https://github.com/nawww83/lfsr.
 
-The program was compiled using Qt 5.15.
+The program was compiled using Qt 6.6.2.
