@@ -6,6 +6,11 @@
 
 namespace io_u {
 
+/**
+ * @brief Структура, помогающая быть независимым от Endianess архитектур процессоров.
+ * Поддерживаются только Little/Big Endianess.
+ * Пишет байты в память всегда как little endian.
+ */
 struct io_utils {
 
     bool is_little_endian() {

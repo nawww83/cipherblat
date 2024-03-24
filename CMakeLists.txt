@@ -17,9 +17,19 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 set(PROJECT_SOURCES
         main.cpp
         widget.cpp
+        worker.cpp
+        lfsr_hash/lfsr_hash.cpp
+        lfsr_hash/lfsr_hash.h
+        lfsr_hash/lfsr.h
+        lfsr_hash/io_utils.h
+        key.h
+        stream_cipher.h
+        worker.h
         widget.h
         widget.ui
 )
+
+include_directories(lfsr_hash)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(cipher
@@ -40,13 +50,6 @@ else()
     else()
         add_executable(cipher
             ${PROJECT_SOURCES}
-            lfsr_hash/io_utils.h
-            lfsr_hash/lfsr.h
-            lfsr_hash/lfsr_hash.h
-            lfsr_hash/lfsr_hash.cpp
-            stream_cipher.h
-            key.h
-            worker.h worker.cpp
         )
     endif()
 endif()

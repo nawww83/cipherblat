@@ -28,10 +28,10 @@ static constexpr salt S2 {31, 8, 11};
 static constexpr salt S3 {29, 9, 5};
 static constexpr salt S4 {37, 2, 13};
 
-static_assert(S0.q >= 4); // enough saturation, m = 4
+static_assert(S0.q >= 4); // Требование достаточного насыщения генераторов, m = 4.
 static_assert(S1.q >= 4);
 
-static_assert(S2.q >= 6*4); // long distance, m = 4
+static_assert(S2.q >= 6*4); // Требование дальнего расстояния по отношению к m = 4.
 static_assert(S3.q >= 6*4);
 static_assert(S4.q >= 6*4);
 

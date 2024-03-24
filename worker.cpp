@@ -3,16 +3,16 @@
 #include <QPair>
 
 
-QFuture<lfsr_rng::gens> worker::seed(lfsr_rng::STATE st) {
+QFuture<lfsr_rng::Generators> Worker::seed(lfsr_rng::STATE st) {
     auto f = [](lfsr_rng::STATE st) {
-        lfsr_rng::gens g;
+        lfsr_rng::Generators g;
         g.seed(st);
         return g;
     };
     return QtConcurrent::run(f, st);
 }
 
-QFuture<QVector<lfsr8::u64> > worker::gen_n(lfsr_rng::gens& g, int n)
+QFuture<QVector<lfsr8::u64> > Worker::gen_n(lfsr_rng::Generators& g, int n)
 {
     auto f = [&g](int n) {
         QVector<lfsr8::u64> v{};

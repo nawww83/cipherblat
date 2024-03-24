@@ -30,6 +30,12 @@ public:
     typedef typename std::conditional<(m <= 4), u32x4, u16x8>::type STATE;
 };
 
+/**
+ * @brief Класс генератор LFSR общего назначения в поле GF(p^m).
+ * Хранит числа в 32-битных ячейках.
+ * p должно быть простым числом в интервале [2, 256).
+ * m - натуральное число на отрезке [1,8].
+ */
 template <int p, int m>
 class LFSR {
     using STATE = typename MType<m>::STATE;
@@ -48,11 +54,9 @@ public:
     };
     void set_state(STATE st) {
         m_state = st;
-        // m_v = m_state[m-1];
     }
     void set_unit_state() {
         m_state = {1};
-        // m_v = m_state[m-1];
     }
     void set_K(STATE K) {
         m_K = K;
@@ -74,7 +78,6 @@ public:
             for (int i=0; i<m; ++i) {
                 m_state[i] %= p;
             }
-            // m_v = m_state[m-1];
         } else {
             __m128i a = _mm_set1_epi32(m_state[m-1]);
             __m128i b = _mm_load_si128((const __m128i*)&m_K[0]);
@@ -89,9 +92,8 @@ public:
             for (int i=0; i<m; ++i) {
                 m_state[i] %= p;
             }
-            // m_v = m_state[m-1];
         }
-#else // general purpose CPU
+#else // Для процессора общего назначения.
         const SAMPLE m_v = m_state[m-1];
         for (int i=m-1; i>0; i--) {
             m_state[i] = (m_state[i-1] + m_v*m_K[i]) % p;
@@ -134,7 +136,6 @@ public:
 private:
     alignas(16) STATE m_state {};
     alignas(16) STATE m_K {};
-    // SAMPLE m_v {};
     SAMPLE m_inv_K0 {};
     void m_calc_inv_K0() {
         const auto x = m_K[0];
@@ -149,6 +150,12 @@ private:
     }
 };
 
+/**
+ * @brief Класс сдвоенного LFSR генератора длиной m = 4*2.
+ * Хранит числа в 16-битных ячейках.
+ * Цель данного генератора: оптимизировать использование основного LFSR класса, если требуется парная работа генераторов.
+ * Генераторы работают независимо, но в одном 128-битном регистре.
+ */
 template <int p>
 class LFSR_paired_2x4 {
     static_assert(p < 256);
@@ -157,13 +164,9 @@ public:
     constexpr LFSR_paired_2x4(u16x8 K): m_K(K) {};
     void set_state(u16x8 state) {
         m_state = state;
-        // m_v3 = m_state[3];
-        // m_v7 = m_state[7];
     }
     void set_unit_state() {
         m_state = {1, 0, 0, 0, 1, 0, 0, 0};
-        // m_v3 = m_state[3];
-        // m_v7 = m_state[7];
     }
     void set_K(u16x8 K) {
         m_K = K;
@@ -257,8 +260,6 @@ public:
 private:
     u16x8 m_state {};
     u16x8 m_K {};
-    // u16 m_v3 {};
-    // u16 m_v7 {};
 };
 
 }

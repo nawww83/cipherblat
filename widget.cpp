@@ -5,7 +5,7 @@
 
 #include "worker.h"
 #include "key.h"
-#include "lfsr_hash/lfsr_hash.h"
+#include "lfsr_hash.h"
 
 /*
 Master phrase:
@@ -26,9 +26,9 @@ OW/BsEiva2'27#47{T47
 
 namespace main {
     QString btn_txt_gen;
-    lfsr_rng::gens cipher;
+    lfsr_rng::Generators cipher;
     int num_of_passwords;
-    worker w;
+    Worker w;
     key::Key key;
 }
 
@@ -41,7 +41,8 @@ namespace {
 
 static QString encode_94(lfsr8::u32 x) {
     constexpr int m = 5;
-    QString res(m);
+    QString res;
+    res.resize(m);
     for (int i=0; i<m; ++i) {
         auto y = x % 94;
         res[m-i-1] = (char)(y + 33);
@@ -71,7 +72,7 @@ Widget::Widget(QWidget *parent)
     //
     ui->btn_generate->setEnabled(false);
     //
-    connect(&watcher_seed, &QFutureWatcher<lfsr_rng::gens>::finished, this, &Widget::seed_has_been_set);
+    connect(&watcher_seed, &QFutureWatcher<lfsr_rng::Generators>::finished, this, &Widget::seed_has_been_set);
     connect(&watcher_generate, &QFutureWatcher<QVector<lfsr8::u64> >::finished, this, &Widget::values_have_been_generated);
 
     qDebug() << "Welcome!";

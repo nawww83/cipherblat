@@ -48,7 +48,7 @@ signals:
 
 private:
     Ui::Widget *ui;
-    QFutureWatcher<lfsr_rng::gens> watcher_seed;
+    QFutureWatcher<lfsr_rng::Generators> watcher_seed;
     QFutureWatcher<QVector<lfsr8::u64>> watcher_generate;
     void update_txt_browser(lfsr8::u16 x);
     void update_txt_browser(lfsr8::u32 x);
