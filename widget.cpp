@@ -1,3 +1,7 @@
+/**
+ * @author nawww83@gmail.com
+ */
+
 #include "widget.h"
 #include "./ui_widget.h"
 #include <QScrollBar>
@@ -6,6 +10,8 @@
 #include "worker.h"
 #include "key.h"
 #include "lfsr_hash.h"
+
+static constexpr auto VERSION = "v2.0";
 
 /*
 Master phrase:
@@ -58,6 +64,10 @@ Widget::Widget(QWidget *parent)
     , ui(new Ui::Widget)
 {
     ui->setupUi(this);
+    //
+    QString title = "Cipher@Blat 128-bit ";
+    title.append(VERSION);
+    this->setWindowTitle( title );
     //
     txt_edit_master_phrase = new MyTextEdit();
     txt_edit_master_phrase->setWindowTitle("Master phrase input");
