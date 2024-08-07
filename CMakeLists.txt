@@ -18,7 +18,6 @@ set(PROJECT_SOURCES
         main.cpp
         widget.cpp
         worker.cpp
-        lfsr_hash/lfsr_hash.cpp
         lfsr_hash/lfsr_hash.h
         lfsr_hash/lfsr.h
         lfsr_hash/io_utils.h

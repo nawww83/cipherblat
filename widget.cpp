@@ -13,14 +13,14 @@ ABCD.
 
 First passwords:
  ***** IDX: 0 *****
-OW/BsEiva2'27#47{T47
-;*>NcB&H{WUE+{:G}|cm
-@@sL/'4n?1!vr*G?L'*k
->+igA(>J,\$B}(PARKS5
-&##A.G!@Ul9QR<<G6MNg
-'*a0U%j2CG?FP0q/=={A
-(bG4,Q.T>]HRdW)R}@hv
-<-1v901x/}5GiUmMvgeP
+=L$/!*_2bkBdE9]66)&9
+$NDbL3JuTn:;(}]SRbt)
+!`;rs<'kxmN=kx(??nu4
+85$62(P9SR?3V-}?1{_i
+@/{blRl[(m6MW8s@kmJ*
+DlN`Q8nDBLQ,N=:$.x5F
+:W13\V\0H,!KEH1He48G
+);7tq"T{h}NiIt<Rjhjg
 */
 
 
@@ -30,6 +30,7 @@ namespace main {
     int num_of_passwords;
     Worker w;
     key::Key key;
+    lfsr_hash::gens generator;
 }
 
 namespace {
@@ -125,13 +126,32 @@ void Widget::update_master_phrase()
     if (text.isEmpty()) {
         return;
     }
-    const auto& bytes = text.toUtf8();
-    auto hash = lfsr_hash::hash128((const uint8_t*)bytes.constData(), bytes.size());
-    //
+    lfsr_hash::u128 hash = {0, 0};
+    constexpr size_t blockSize = 64;
+    {
+        using namespace lfsr_hash;
+        auto bytes = text.toUtf8();
+        {
+            const auto bytesRead = bytes.size();
+            const size_t r = bytesRead % blockSize;
+            bytes.resize(bytesRead + (r > 0 ? blockSize - r : 0), '\0'); // Zero padding.
+        }
+        const auto bytesRead = bytes.size();
+        {
+            const salt& original_size_salt {static_cast<int>(bytesRead % blockSize),
+                                          static_cast<u16>(bytesRead),
+                                          static_cast<u16>(bytesRead)};
+            const size_t n = bytesRead / blockSize;
+            for (size_t i=0; i<n; ++i) {
+                u128 inner_hash = hash128<blockSize>(main::generator,
+                                                     reinterpret_cast<const uint8_t*>(bytes.data() + i*blockSize), original_size_salt);
+                hash.first ^= inner_hash.first;
+                hash.second ^= inner_hash.second;
+            }
+        }
+    }
     auto x = hash.first;
     auto y = hash.second;
-    hash.first = 0;
-    hash.second = 0;
     {
         using main::key;
         key.set_key(x % 65536, 3);
@@ -144,10 +164,13 @@ void Widget::update_master_phrase()
         key.set_key((y >> 48) % 65536, 4);
     }
     // Clear
+    #pragma optimize( "", off )
     x ^= x; y ^= y;
+    hash.first = 0; hash.second = 0;
     for (auto& el : text) {
         el = '\0';
     }
+    #pragma optimize( "", on )
     emit master_phrase_ready();
 }
 

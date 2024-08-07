@@ -40,12 +40,10 @@ struct io_utils {
             std::memcpy(buffer, &x, sizeof(uint16_t));
             return;
         }
-        // if (! is_little_endian()) {
         {
             const uint16_t t = x;
             x = ((t >> 8) & 0xff);
             x |= ((t << 8) & 0xff00);
-            // std::swap(buffer[0], buffer[1]);
             std::memcpy(buffer, &x, sizeof(uint16_t));
         }
     }
@@ -57,15 +55,12 @@ struct io_utils {
             std::memcpy(buffer, &x, sizeof(uint32_t));
             return;
         }
-        // if (! is_little_endian()) {
         {
             const uint32_t t = x;
             x = ((t >> 24) & 0xff);
             x |= ((t >> 8) & 0xff00);
             x |= ((t << 8) & 0xff0000);
             x |= ((t << 24) & 0xff000000);
-            // std::swap(buffer[0], buffer[3]);
-            // std::swap(buffer[1], buffer[2]);
             std::memcpy(buffer, &x, sizeof(uint32_t));
         }
     }

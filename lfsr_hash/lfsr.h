@@ -99,7 +99,6 @@ public:
             m_state[i] = (m_state[i-1] + m_v*m_K[i]) % p;
         }
         m_state[0] = (input + m_v*m_K[0]) % p;
-        // m_v = m_state[m-1];
 #endif
     }
     void back(SAMPLE input=0) {
@@ -200,8 +199,6 @@ public:
         }
         m_state[0] = (input + m_v3*m_K[0]) % p;
         m_state[4] = (input + m_v7*m_K[4]) % p;
-        // m_v3 = m_state[3];
-        // m_v7 = m_state[7];
 #endif
     }
     void next(u16 inp1, u16 inp2) {
@@ -236,8 +233,6 @@ public:
         }
         m_state[0] = (inp1 + m_v3*m_K[0]) % p;
         m_state[4] = (inp2 + m_v7*m_K[4]) % p;
-        // m_v3 = m_state[3];
-        // m_v7 = m_state[7];
 #endif
     }
     auto get_state() const {

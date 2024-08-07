@@ -20,7 +20,7 @@ QFuture<QVector<lfsr8::u64> > Worker::gen_n(lfsr_rng::Generators& g, int n)
         for (int i=0; i<n; ++i) {
             v.push_back( g.next_u64() );
         }
-        QThread::msleep(20); // do not rush! :)
+        QThread::msleep(20);
         return v;
     };
     return QtConcurrent::run(f, n);
